@@ -22,7 +22,9 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      required: true
+      enum: ["user", "admin"],
+      default: "user"
+      
     },
     favoritos: [{
       type: mongoose.Schema.Types.ObjectId,

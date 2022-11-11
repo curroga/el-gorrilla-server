@@ -55,7 +55,6 @@ router.post("/signup", async (req, res, next) => {
       username: username,
       email: email,
       password: hashPassword,
-      role: "User"
     }
     await User.create(newUser)
     
@@ -82,10 +81,10 @@ router.post("/login", async (req, res, next) => {
   }
     
  try {
-   // vaidar que el correo electrónico sea único, no este registrado
+   // validar que el username sea único, no este registrado
    const foundUser = await User.findOne({ username: username })
    if(foundUser === null) {
-     res.status(401).json({errorMessage: "Credenciales no validas"})
+     res.status(400).json({errorMessage: "Credenciales no validas"})
      return;
   }
   const isPasswordValid = await bcrypt.compare(password, foundUser.password);
@@ -124,8 +123,8 @@ router.post("/login", async (req, res, next) => {
 router.get("/verify", isAuthenticated, (req, res, next) => {
 
   console.log(req.payload) // vemos la info del usuario que se ha logeado(pero de los que se han autenticado)
-  let info= req.payload
-  res.status(200).json(`Token valido, usuario ya logeado! Nombre: ${info.username}, Email: ${info.email} role: ${info.role}`)
+  
+  res.status(200).json(req.payload)
   
 })
 
