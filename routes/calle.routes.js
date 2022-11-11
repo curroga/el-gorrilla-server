@@ -63,4 +63,46 @@ router.get("/:calleId", async (req, res, next) => {
 
 })
 
+//DELETE "/api/calle/:calleId" borrar un documento de ToDo de la BD por su id
+router.delete("/:calleId", async (req, res, next) => {
+  const { calleId } = req.params
+  try {
+    // borrar el documento por su id
+    await Calles.findByIdAndDelete(calleId)
+
+    // enviar repuesta al FE(Front End)
+    res.status(200).json("todo bien, documento borrado")
+    
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Patch "/api/calle/:calleId" =>editar un documento de Calle de la BD por su id
+
+router.patch("/:calleId", async (req, res, next) => {
+  // buscar los cambios a editar del documento
+  const { calleId } = req.params
+  const { name, numAparcamientos, positionMarker} = req.body
+
+  const calleUpdates = {
+    name,
+    numAparcamientos,
+    // positionMapContainer,
+    positionMarker: JSON.parse(positionMarker)    
+  }
+
+  try {
+    // editar el documento por su id
+    await Calles.findByIdAndUpdate(calleId, calleUpdates)
+      
+    // enviar mensaje de "todo bien" al FE
+    res.status(200).json("todo bien, documento actualizado")
+    
+  } catch (error) {
+    next(error)    
+  }
+
+})
+
 module.exports = router
