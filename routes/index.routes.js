@@ -10,4 +10,7 @@ router.use("/auth", authRoutes)
 const callesRoutes = require("./calle.routes")
 router.use("/calle", callesRoutes)
 
+const carsRoutes = require("./cars.routes")
+router.use("/car", carsRoutes)
+
 module.exports = router;

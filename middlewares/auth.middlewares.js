@@ -24,4 +24,17 @@ const isAuthenticated = jwt({
     
   }
 })
-module.exports = isAuthenticated
+
+const isAdmin = (req, res, next) => {
+  if(req.payload.role !== "admin"){
+    res.status(401).json({errorMessage: "No eres Admin"})
+    return;
+  } else {
+    next()
+  }
+}
+module.exports = {
+  isAuthenticated,
+  isAdmin    
+} 
+//module.exports = isAuthenticated

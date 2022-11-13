@@ -1,9 +1,10 @@
 const router = require("express").Router();
 const Calles = require("../models/Calles.model");
+const {isAuthenticated, isAdmin} = require("../middlewares/auth.middlewares.js");
 
 
 // GET "/api/calle" => enviar los titulos de todas las calles
-router.get("/", async (req, res, next) => {
+router.get("/", isAuthenticated, async (req, res, next) => {
 
   try {
 
@@ -19,7 +20,7 @@ router.get("/", async (req, res, next) => {
 })
 
 // POST "/api/calle" => recibe detalles de una nueva calle y lo crea en la DB
-router.post("/", async (req, res, next) => {
+router.post("/", isAuthenticated, isAdmin, async (req, res, next) => {
   console.log("postman accediendo a la ruta")
 
   // recopilar la informacion del client (postman)
@@ -45,7 +46,7 @@ router.post("/", async (req, res, next) => {
 })
 
 // GET "/api/calle/:calleId" => enviar todos los detalles de una calle por su Id
-router.get("/:calleId", async (req, res, next) => {
+router.get("/:calleId", isAuthenticated, async (req, res, next) => {
 
   const { calleId } = req.params
 
@@ -63,8 +64,8 @@ router.get("/:calleId", async (req, res, next) => {
 
 })
 
-//DELETE "/api/calle/:calleId" borrar un documento de ToDo de la BD por su id
-router.delete("/:calleId", async (req, res, next) => {
+//DELETE "/api/calle/:calleId" borrar un documento de Calle de la BD por su id
+router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   const { calleId } = req.params
   try {
     // borrar el documento por su id
@@ -80,7 +81,7 @@ router.delete("/:calleId", async (req, res, next) => {
 
 // Patch "/api/calle/:calleId" =>editar un documento de Calle de la BD por su id
 
-router.patch("/:calleId", async (req, res, next) => {
+router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
   const { name, numAparcamientos, positionMarker} = req.body
