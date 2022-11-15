@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Calles = require("../models/Calles.model");
+const User = require("../models/User.model");
 const {isAuthenticated, isAdmin} = require("../middlewares/auth.middlewares.js");
 
 
@@ -25,13 +26,14 @@ router.post("/", isAuthenticated, isAdmin, async (req, res, next) => {
 
   // recopilar la informacion del client (postman)
   console.log(req.body)
-  const { name, numAparcamientos, positionMapContainer, positionMarker } = req.body
+  const { name, numAparcamientos, positionMarker } = req.body
 
   const newCalle = {
     name,
     numAparcamientos,
+    positionMarker
     // positionMapContainer,
-    positionMarker: JSON.parse(positionMarker) //! cuando haga pruebas, en el FE coloco solo positionMarker(sin el JSON.PARSE)
+    // positionMarker: JSON.parse(positionMarker) //! cuando haga pruebas, en el FE coloco solo positionMarker(sin el JSON.PARSE)
   }
   // usar la informacion para crear 
   try {
@@ -84,13 +86,14 @@ router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
-  const { name, numAparcamientos, positionMarker} = req.body
+  const { name, numAparcamientos, numLibres, positionMarker} = req.body
 
   const calleUpdates = {
     name,
     numAparcamientos,
+    numLibres
     // positionMapContainer,
-    positionMarker: JSON.parse(positionMarker)    
+    //!positionMarker: JSON.parse(positionMarker)    
   }
 
   try {
@@ -104,6 +107,23 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
     next(error)    
   }
 
+})
+
+//PATCH "/api/calle/:calleId/favoritos"
+router.patch("/:calleId/favoritos", isAuthenticated, isAdmin, async (req, res, next) => {
+  const { calleId } = req.params
+  const userId = req.payload._id
+  console.log(calleId)
+  console.log(userId)
+
+  try {
+    const response = await User.findByIdAndUpdate(userId, {$push: {favoritos: calleId}})
+    console.log(response)
+    res.status(200).json(response)
+    
+  } catch (error) {
+    next(error)
+  }
 })
 
 module.exports = router
