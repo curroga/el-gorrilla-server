@@ -1,13 +1,15 @@
 const router = require("express").Router();
 const Cars = require("../models/Cars.models")
+
 const {isAuthenticated} = require("../middlewares/auth.middlewares.js");
 
 // GET "/api/car" => enviar el modelo de todos los coches
 router.get("/", isAuthenticated, async (req, res, next) => {
 
   try {
-    //1. buscar en la base de datos todas las calles 
-    const response = await Cars.find().select("modelo")
+    //1. buscar en la base de datos todas los coches  
+    const response = await Cars.find({owner: req.payload._id})
+    
     //2. enviarlas al cliente 
     res.status(200).json(response)  
   } catch (error) {
@@ -20,15 +22,14 @@ router.post("/", isAuthenticated, async (req, res, next) => {
   console.log("postman accediendo a la ruta")
 
   // recopilar la info del cliente (Postman)
-  console.log(req.body)
-  //!console.log(req.payload)
+  console.log(req.body)  
   const { modelo, matricula, color } = req.body
 
   const newCoche = {
     modelo,
     matricula,
     color,
-   // owner: req.payload.username //! preguntar
+    owner: req.payload._id 
   }
 
   try {

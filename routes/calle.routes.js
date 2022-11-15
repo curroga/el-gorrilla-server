@@ -9,7 +9,7 @@ router.get("/", isAuthenticated, async (req, res, next) => {
   try {
 
     //1. buscar en la base de datos todas las calles
-    const response = await Calles.find().select("name")
+    const response = await Calles.find().select("name positionMarker")
 
     //2. enviarlos al cliente (postman)
     res.status(200).json(response)

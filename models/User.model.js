@@ -25,7 +25,7 @@ const userSchema = new Schema(
       enum: ["user", "admin"],
       default: "user"
       
-    },
+    },    
     favoritos: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Calles"
