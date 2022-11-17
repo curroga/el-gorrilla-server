@@ -3,19 +3,14 @@ const mongoose = require("mongoose")
 const calleSchema = new mongoose.Schema ({
   name: String,
   numAparcamientos: Number,
-  numLibres: {
+  numOcupados: {
     type: Number,
     default: 0
   },
-  // estadoAparcamiento: {
-  //   type: String,
-  //   enum: ["Libre", "Ocupado", "A punto de salir"],
-  //   default: "Ocupado"
-  // },
-  // positionMapContainer: [
-  //   { type: Number },
-  //   { type: Number }
-  // ],
+  coches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Cars"
+  }], 
   positionMarker: [
     { type: Number }    
   ]
