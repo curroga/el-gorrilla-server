@@ -19,10 +19,10 @@ router.get("/", isAuthenticated, async (req, res, next) => {
 
 // POST "/api/car" => recibe detalles de un nuevo coche y lo crea en la BD
 router.post("/", isAuthenticated, async (req, res, next) => {
-  console.log("postman accediendo a la ruta")
+  
 
   // recopilar la info del cliente (Postman)
-  console.log(req.body)  
+    
   const { modelo, matricula, color } = req.body
 
   const newCoche = {

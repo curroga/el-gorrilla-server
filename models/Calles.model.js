@@ -7,6 +7,10 @@ const calleSchema = new mongoose.Schema ({
     type: Number,
     default: 0
   },
+  numLibres: {
+    type: Number,
+    default: 0
+  },
   coches: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: "Cars"

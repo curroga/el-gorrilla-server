@@ -6,7 +6,7 @@ const isAuthenticated = jwt({
   algorithms: ["HS256"],
   requestProperty: "payload",
   getToken: (req) => { // esto es donde va a venir la info TOKEN
-    console.log(req.headers)
+    
     if(req.headers === undefined || req.headers.authorization === undefined){
       console.log("No hay Token")
       return null
@@ -37,4 +37,3 @@ module.exports = {
   isAuthenticated,
   isAdmin    
 } 
-//module.exports = isAuthenticated

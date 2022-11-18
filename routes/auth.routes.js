@@ -7,7 +7,7 @@ const {isAuthenticated} = require("../middlewares/auth.middlewares.js");
 //POST "/api/auth/signup" => registrar a un usuario
 router.post("/signup", async (req, res, next) => {
   
-  console.log(req.body)
+  
   const { username, email, password, role } =req.body
 
   // 1. Hacer validaciones de Backend
@@ -68,8 +68,7 @@ router.post("/signup", async (req, res, next) => {
 })
 
 //POST "/api/auth/login" => validar credenciales del usuario
-router.post("/login", async (req, res, next) => {
-  console.log(req.body)
+router.post("/login", async (req, res, next) => {  
 
   const { username, password } = req.body
 
@@ -122,7 +121,7 @@ router.post("/login", async (req, res, next) => {
 //GET "/api/auth/verify" => para que el BE le diga al FE si el ususuario ya ha sido validado
 router.get("/verify", isAuthenticated, (req, res, next) => {
 
-  console.log(req.payload) // vemos la info del usuario que se ha logeado(pero de los que se han autenticado)
+  //console.log(req.payload) // vemos la info del usuario que se ha logeado(pero de los que se han autenticado)
   
   res.status(200).json(req.payload)
   

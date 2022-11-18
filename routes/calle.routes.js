@@ -26,7 +26,7 @@ router.get("/", isAuthenticated, async (req, res, next) => {
 // GET "/calle/favoritos"
 router.get("/favoritos", isAuthenticated, async (req, res, next) => {
   const userId = req.payload._id
-  console.log(userId)
+  
   try {
     const user = await User.findById(userId).populate("favoritos");
     const response = await Calles.find({ _id: { $in: user.favoritos } });
@@ -39,10 +39,10 @@ router.get("/favoritos", isAuthenticated, async (req, res, next) => {
 
 // POST "/api/calle" => recibe detalles de una nueva calle y lo crea en la DB
 router.post("/", isAuthenticated, isAdmin, async (req, res, next) => {
-  console.log("postman accediendo a la ruta")
+  
 
   // recopilar la informacion del client (postman)
-  console.log(req.body)
+  
   const { name, numAparcamientos, positionMarker } = req.body
 
   const newCalle = {
@@ -102,12 +102,14 @@ router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
-  const { name, numAparcamientos, numOcupados } = req.body
+  const { name, numAparcamientos, numOcupados, numLibres, positionMarker } = req.body
 
   const calleUpdates = {
     name,
     numAparcamientos,
-    numOcupados    
+    numOcupados,
+    numLibres,
+    positionMarker    
     //!positionMarker: JSON.parse(positionMarker)    
   }
 
@@ -132,12 +134,11 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 router.patch("/favoritos-update/:calleId", isAuthenticated, async (req, res, next) => {
   const { calleId } = req.params
   const userId = req.payload._id
-  console.log(calleId)
-  console.log(userId)
+  
 
   try {
     const response = await User.findByIdAndUpdate(userId, {$push: {favoritos: calleId}}, {new:true})
-    console.log(response)
+    
     res.status(200).json(response)
     
   } catch (error) {
@@ -149,8 +150,7 @@ router.patch("/favoritos-update/:calleId", isAuthenticated, async (req, res, nex
 router.patch("/favoritos-delete/:calleId", isAuthenticated, async (req, res, next) => {
   const { calleId } = req.params
   const userId = req.payload._id
-  console.log(calleId)
-  console.log(userId)
+  
 
   try {
     const response = await User.findByIdAndUpdate(userId, {$pull: {favoritos: calleId}}, {new:true})
@@ -164,13 +164,12 @@ router.patch("/favoritos-delete/:calleId", isAuthenticated, async (req, res, nex
 //PATCH "/api/calle/:calleId/:cocheId" => ruta para añadir un coche a la calle y que recibe dos params dinamicos, uno va a ser la id de la calle a la que queremos agregar el coche y el otro va a ser el id del coche que queremos agregar
 router.patch("/:calleId/:cocheId", isAuthenticated, async (req, res, next) => {
   const { calleId, cocheId  } = req.params
-  console.log("calleId:", calleId)
-  console.log("cocheId:", cocheId)
+  
 
   try {    
 
     const response = await Calles.findByIdAndUpdate(calleId, {$addToSet: {coches: cocheId }})
-    console.log("response", response)
+    
     res.status(200).json(response)
     return;
     
@@ -182,13 +181,12 @@ router.patch("/:calleId/:cocheId", isAuthenticated, async (req, res, next) => {
 //PATCH "/api/calle/:calleId/:cocheId" => ruta para quitar un coche de la calle
 router.patch("/delete/:calleId/:cocheId", isAuthenticated, async (req, res, next) => {
   const { calleId, cocheId  } = req.params
-  console.log("calleId:", calleId)
-  console.log("cocheId:", cocheId)
+  
 
   try {    
 
     const response = await Calles.findByIdAndUpdate(calleId, {$pull: {coches: cocheId }})
-    console.log("response", response)
+    
     res.status(200).json(response)
     return;
     
