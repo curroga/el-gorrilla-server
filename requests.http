@@ -1,0 +1,80 @@
+
+# REST Client Environment Variables
+# Save this as .env or http-client.env.json for better security and reusability
+@baseUrl = http://localhost:3000/api
+@username = 
+@email = 
+@password = 
+@token = 
+
+### =================== AUTH ROUTES ===================
+# @name signup
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+# @name verify
+GET {{baseUrl}}/auth/verify
+Authorization: Bearer {{token}}
+
+### =================== STREETS ROUTES ===================
+# @name getAllStreets
+GET {{baseUrl}}/calle
+Authorization: Bearer {{token}}
+
+###
+# @name getStreetById
+@streetId = some-street-id
+GET {{baseUrl}}/calle/{{streetId}}
+Authorization: Bearer {{token}}
+
+###
+# @name createStreet
+POST {{baseUrl}}/calle
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Calle Falsa 123",
+  "numAparcamientos": 10,
+  "positionMarker": [-3.703790, 40.416775]
+}
+
+### =================== CARS ROUTES ===================
+# @name getAllCars
+GET {{baseUrl}}/car
+Authorization: Bearer {{token}}
+
+###
+# @name getCarById
+@carId = SOME_CAR_ID
+GET {{baseUrl}}/car/{{carId}}
+Authorization: Bearer {{token}}
+
+###
+# @name createCar
+POST {{baseUrl}}/car
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "modelo": "Mercedes-Benz Clase A",
+  "matricula": "91234ABC",
+  "color": "Negro"
+}
