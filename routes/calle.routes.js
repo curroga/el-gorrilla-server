@@ -128,58 +128,47 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 
 // rutas para crear una lista de favoritos
 
-
-
-//PATCH "/api/calle/favoritos/:calleId" añadir una calle favorita 
-router.patch("/favoritos-update/:calleId", isAuthenticated, async (req, res, next) => {
-  const { calleId } = req.params
-  const userId = req.payload._id
-  
+// POST "/api/calle/favoritos/:calleId" añadir una calle favorita 
+router.post("/favoritos/:calleId", isAuthenticated, async (req, res, next) => {
+  const { calleId } = req.params;
+  const userId = req.payload._id;
 
   try {
-    const response = await User.findByIdAndUpdate(userId, {$push: {favoritos: calleId}}, {new:true})
-    
-    res.status(200).json(response)
-    
+    // $addToSet previene duplicados, es más robusto que $push aquí.
+    await User.findByIdAndUpdate(userId, { $addToSet: { favoritos: calleId } });
+    res.status(200).json({ message: "Calle añadida a favoritos" });
   } catch (error) {
-    next(error)
+    next(error);
   }
-})
+});
 
-//PATCH "/api/calle/favoritos-delete/:calleId" borrar una calle favorita
-router.patch("/favoritos-delete/:calleId", isAuthenticated, async (req, res, next) => {
-  const { calleId } = req.params
-  const userId = req.payload._id
-  
+// DELETE "/api/calle/favoritos/:calleId" borrar una calle favorita
+router.delete("/favoritos/:calleId", isAuthenticated, async (req, res, next) => {
+  const { calleId } = req.params;
+  const userId = req.payload._id;
 
   try {
-    const response = await User.findByIdAndUpdate(userId, {$pull: {favoritos: calleId}}, {new:true})
-    res.status(200).json(response)
+    await User.findByIdAndUpdate(userId, { $pull: { favoritos: calleId } });
+    res.status(200).json({ message: "Calle eliminada de favoritos" });
   } catch (error) {
-    next(error)
+    next(error);
   }
+});
 
-})
-
-//PATCH "/api/calle/:calleId/:cocheId" => ruta para añadir un coche a la calle y que recibe dos params dinamicos, uno va a ser la id de la calle a la que queremos agregar el coche y el otro va a ser el id del coche que queremos agregar
-router.patch("/:calleId/:cocheId", isAuthenticated, async (req, res, next) => {
+// POST "/api/calle/:calleId/coches/:cocheId" => ruta para añadir un coche a la calle
+router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next) => {
   const { calleId, cocheId  } = req.params
   
-
   try {    
-
-    const response = await Calles.findByIdAndUpdate(calleId, {$addToSet: {coches: cocheId }})
-    
-    res.status(200).json(response)
-    return;
-    
+    await Calles.findByIdAndUpdate(calleId, {$addToSet: {coches: cocheId }})
+    res.status(200).json({ message: "Coche añadido a la calle" })
   } catch (error) {
     next(error)
   }
 })
 
-//PATCH "/api/calle/:calleId/:cocheId" => ruta para quitar un coche de la calle
-router.patch("/delete/:calleId/:cocheId", isAuthenticated, async (req, res, next) => {
+// DELETE "/api/calle/:calleId/coches/:cocheId" => ruta para quitar un coche de la calle
+router.delete("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next) => {
   const { calleId, cocheId  } = req.params
   
 
@@ -187,8 +176,7 @@ router.patch("/delete/:calleId/:cocheId", isAuthenticated, async (req, res, next
 
     const response = await Calles.findByIdAndUpdate(calleId, {$pull: {coches: cocheId }})
     
-    res.status(200).json(response)
-    return;
+    res.status(200).json({ message: "Coche quitado de la calle" })
     
   } catch (error) {
     next(error)

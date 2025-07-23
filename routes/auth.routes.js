@@ -33,16 +33,10 @@ router.post("/signup", async (req, res, next) => {
   
   try {
     // validar que el usuario sea unico, no este registrado en la db
-    const foundUser = await User.findOne({ username: username })    
-    if (foundUser !== null) {
-      res.status(401).json({errorMessage: "Usuario ya creado con ese nomnbre"})
-      return;
-    }
-  
-    // vaidar que el correo electrónico sea único, no este registrado
-    const foundEmail = await User.findOne({ email: email })
-    if(foundEmail !== null) {
-      res.status(401).json({errorMessage: "Correo electrónico ya creado"})
+    const foundUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (foundUser) {
+      // Usar 409 Conflict es más apropiado aquí
+      res.status(409).json({ errorMessage: "El nombre de usuario o el email ya están en uso." });
       return;
     }
 
@@ -83,12 +77,12 @@ router.post("/login", async (req, res, next) => {
    // validar que el username sea único, no este registrado
    const foundUser = await User.findOne({ username: username })
    if(foundUser === null) {
-     res.status(400).json({errorMessage: "Credenciales no validas"})
+     res.status(401).json({errorMessage: "Credenciales no validas"})
      return;
   }
   const isPasswordValid = await bcrypt.compare(password, foundUser.password);
   if(isPasswordValid === false) {
-     res.status(401).json({errorMessage: "Credenciales no validas"})
+     res.status(401).json({errorMessage: "Credenciales no validas"}) // Mismo mensaje para no dar pistas
      return;
   }
 
