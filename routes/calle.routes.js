@@ -167,7 +167,7 @@ router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next)
         _id: calleId,
         $or: [
           { coches: cocheId },
-          { $expr: { $lt: [{ $size: "$coches" }, { $ifNull: ["$numAparcamientos", 0] }] } }
+          { $expr: { $lt: [{ $size: { $ifNull: ["$coches", []] } }, { $ifNull: ["$numAparcamientos", 0] }] } }
         ]
       },
       { $addToSet: { coches: cocheId } }

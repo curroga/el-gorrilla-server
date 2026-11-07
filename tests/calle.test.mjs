@@ -217,6 +217,18 @@ describe("parking cars on a street", () => {
     expect((await Calles.findById(calle._id)).coches.map(String)).toEqual([parked._id.toString()]);
   });
 
+  it("parks on a legacy street stored without a coches field", async () => {
+    const { user, auth } = await loginAs();
+    const car = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const { insertedId } = await Calles.collection.insertOne({ name: "Legacy", numAparcamientos: 2 });
+
+    const res = await api().post(`/api/calle/${insertedId}/coches/${car._id}`).set("Authorization", auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ message: "Coche añadido a la calle" });
+    expect((await Calles.findById(insertedId)).coches.map(String)).toEqual([car._id.toString()]);
+  });
+
   it("parking a car already on a full street is a no-op, not a 409", async () => {
     const { user, auth } = await loginAs();
     const parked = await Cars.create({ modelo: "Ibiza", owner: user._id });
