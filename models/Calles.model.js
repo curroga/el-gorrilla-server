@@ -25,8 +25,12 @@ const calleSchema = new mongoose.Schema ({
 // Antes, numOcupados se guardaba y solo lo editaba el admin a mano, así que
 // ese valor equivale al ajuste manual. Si una calle aún no tiene
 // ocupadosExternos, se usa el numOcupados guardado (sin migrar los datos).
+// Solo cuenta un entero >= 0; cualquier otro valor guardado cuenta como 0.
+// La comprobación de plazas de routes/calle.routes.js aplica la misma regla.
+const plazasValidas = (value) => (Number.isInteger(value) && value >= 0 ? value : 0)
+
 calleSchema.pre("init", function (raw) {
-  if (raw && raw.ocupadosExternos == null && typeof raw.numOcupados === "number") {
+  if (raw && raw.ocupadosExternos == null && Number.isInteger(raw.numOcupados) && raw.numOcupados >= 0) {
     raw.ocupadosExternos = raw.numOcupados
   }
 })
@@ -35,7 +39,7 @@ calleSchema.pre("init", function (raw) {
 // aparcados, del ajuste del admin y de numAparcamientos, para que no puedan
 // contradecirse.
 calleSchema.virtual("numOcupados").get(function () {
-  return (this.coches || []).length + (this.ocupadosExternos || 0)
+  return (this.coches || []).length + plazasValidas(this.ocupadosExternos)
 })
 
 calleSchema.virtual("numLibres").get(function () {

@@ -115,8 +115,11 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // el ajuste del admin es opcional; si llega, debe ser un entero >= 0
   // (el formulario lo envía como texto, por eso se convierte)
   if (ocupadosExternos !== undefined) {
+    const esEntero =
+      (typeof ocupadosExternos === "number" && Number.isInteger(ocupadosExternos) && ocupadosExternos >= 0) ||
+      (typeof ocupadosExternos === "string" && /^\d+$/.test(ocupadosExternos.trim()))
     const value = Number(ocupadosExternos)
-    if (ocupadosExternos === "" || ocupadosExternos === null || !Number.isInteger(value) || value < 0) {
+    if (!esEntero) {
       res.status(400).json({ errorMessage: "ocupadosExternos debe ser un número entero mayor o igual que 0" })
       return;
     }
@@ -184,8 +187,26 @@ router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next)
                 {
                   $add: [
                     { $size: { $ifNull: ["$coches", []] } },
-                    // ajuste del admin; en calles antiguas, el numOcupados guardado
-                    { $ifNull: ["$ocupadosExternos", { $ifNull: ["$numOcupados", 0] }] }
+                    // ajuste del admin; en calles antiguas, el numOcupados guardado.
+                    // Solo cuenta un entero >= 0 (misma regla que el modelo).
+                    {
+                      $let: {
+                        vars: { ajuste: { $ifNull: ["$ocupadosExternos", { $ifNull: ["$numOcupados", 0] }] } },
+                        in: {
+                          $cond: [
+                            {
+                              $and: [
+                                { $isNumber: "$$ajuste" },
+                                { $gte: ["$$ajuste", 0] },
+                                { $eq: ["$$ajuste", { $trunc: "$$ajuste" }] }
+                              ]
+                            },
+                            "$$ajuste",
+                            0
+                          ]
+                        }
+                      }
+                    }
                   ]
                 },
                 { $ifNull: ["$numAparcamientos", 0] }

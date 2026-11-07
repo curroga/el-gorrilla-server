@@ -228,7 +228,7 @@ describe("parking cars on a street", () => {
     expect(details.body).toMatchObject({ ocupadosExternos: 0, numOcupados: 0, numLibres: 4 });
   });
 
-  it.each([[-1], ["abc"], [1.5]])("rejects the adjustment %s with 400 and changes nothing", async (value) => {
+  it.each([[-1], ["abc"], [1.5], [""], [null], [" "], [true], [[3]], ["1e1"]])("rejects the adjustment %j with 400 and changes nothing", async (value) => {
     const { auth } = await loginAs({ role: "admin" });
     const calle = await createCalle({ ocupadosExternos: 2 });
 
@@ -237,6 +237,22 @@ describe("parking cars on a street", () => {
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ errorMessage: "ocupadosExternos debe ser un número entero mayor o igual que 0" });
     expect(await Calles.findById(calle._id)).toMatchObject({ name: "Gran Vía", ocupadosExternos: 2 });
+  });
+
+  it.each([[-1], [1.5], ["2"]])("counts an invalid legacy numOcupados %j as 0 when reading and parking", async (legacy) => {
+    const { user, auth } = await loginAs();
+    const car = await Cars.create({ modelo: "León", owner: user._id });
+    const { insertedId } = await Calles.collection.insertOne({
+      name: "Legacy", numAparcamientos: 1, numOcupados: legacy, coches: [],
+    });
+
+    const details = await api().get(`/api/calle/${insertedId}`).set("Authorization", auth);
+    expect(details.body).toMatchObject({ numOcupados: 0, numLibres: 1 });
+
+    const park = await api().post(`/api/calle/${insertedId}/coches/${car._id}`).set("Authorization", auth);
+    expect(park.status).toBe(200);
+    const after = await api().get(`/api/calle/${insertedId}`).set("Authorization", auth);
+    expect(after.body).toMatchObject({ numOcupados: 1, numLibres: 0 });
   });
 
   it("rejects parking with 409 when the admin adjustment fills the street", async () => {
