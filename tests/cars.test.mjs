@@ -49,13 +49,40 @@ describe("GET /api/car/:carId", () => {
     expect(res.body).toMatchObject({ _id: car._id.toString(), ...carBody });
   });
 
-  // Current behavior (pinned): an unknown id is not a 404.
-  it("answers 200 with null for an unknown id", async () => {
+  it("answers 404 for an unknown id", async () => {
     const { auth } = await loginAs();
     const id = new mongoose.Types.ObjectId();
     const res = await api().get(`/api/car/${id}`).set("Authorization", auth);
-    expect(res.status).toBe(200);
-    expect(res.body).toBeNull();
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Coche no encontrado");
+  });
+
+  it("answers 404 for a malformed id", async () => {
+    const { auth } = await loginAs();
+    const res = await api().get("/api/car/not-an-id").set("Authorization", auth);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ errorMessage: "Recurso no encontrado" });
+  });
+});
+
+describe("unknown car on PATCH and DELETE", () => {
+  it("PATCH answers 404 and creates nothing", async () => {
+    const { auth } = await loginAs();
+    const id = new mongoose.Types.ObjectId();
+    const res = await api().patch(`/api/car/${id}`).set("Authorization", auth).send(carBody);
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Coche no encontrado");
+    expect(await Cars.countDocuments()).toBe(0);
+  });
+
+  it("DELETE answers 404 and keeps the user's cars", async () => {
+    const { user, auth } = await loginAs();
+    await Cars.create({ ...carBody, owner: user._id });
+    const id = new mongoose.Types.ObjectId();
+    const res = await api().delete(`/api/car/${id}`).set("Authorization", auth);
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Coche no encontrado");
+    expect(await Cars.countDocuments()).toBe(1);
   });
 });
 
@@ -93,6 +120,7 @@ describe("ownership on /api/car/:carId", () => {
 
     const read = await api().get(`/api/car/${car._id}`).set("Authorization", intruder);
     expect(read.status).toBe(404);
+    expect(read.body).toBe("Coche no encontrado");
   });
 
   it("does not let another user edit a car they do not own", async () => {

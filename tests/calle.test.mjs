@@ -61,20 +61,45 @@ describe("GET /api/calle/:calleId", () => {
     expect(res.body).toMatchObject({ _id: calle._id.toString(), name: "Gran Vía" });
   });
 
-  // Current behavior (pinned): an unknown id is not a 404.
-  it("answers 200 with null for an unknown id", async () => {
+  it("answers 404 for an unknown id", async () => {
     const { auth } = await loginAs();
     const res = await api().get(`/api/calle/${unknownId()}`).set("Authorization", auth);
-    expect(res.status).toBe(200);
-    expect(res.body).toBeNull();
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Calle no encontrada");
   });
 
-  // Current behavior (pinned): a malformed id becomes a 500.
-  it("answers 500 for a malformed id", async () => {
+  it("answers 404 for a malformed id", async () => {
     const { auth } = await loginAs();
     const res = await api().get("/api/calle/not-an-id").set("Authorization", auth);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ errorMessage: "Recurso no encontrado" });
+  });
+});
+
+describe("unknown street on admin routes", () => {
+  it("PATCH answers 404 and creates nothing", async () => {
+    const { auth } = await loginAs({ role: "admin" });
+    const res = await api().patch(`/api/calle/${unknownId()}`).set("Authorization", auth).send({ name: "Alcalá" });
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Calle no encontrada");
+    expect(await Calles.countDocuments()).toBe(0);
+  });
+
+  it("DELETE answers 404 and keeps the other streets", async () => {
+    const { auth } = await loginAs({ role: "admin" });
+    await createCalle();
+    const res = await api().delete(`/api/calle/${unknownId()}`).set("Authorization", auth);
+    expect(res.status).toBe(404);
+    expect(res.body).toBe("Calle no encontrada");
+    expect(await Calles.countDocuments()).toBe(1);
+  });
+
+  it("a non-ObjectId value in the body is not turned into a 404", async () => {
+    const { auth } = await loginAs({ role: "admin" });
+    const calle = await createCalle();
+    const res = await api().patch(`/api/calle/${calle._id}`).set("Authorization", auth).send({ numAparcamientos: "muchos" });
     expect(res.status).toBe(500);
-    expect(res.body).toEqual({ message: "Internal server error. Check the server console" });
+    expect((await Calles.findById(calle._id)).numAparcamientos).toBe(10);
   });
 });
 

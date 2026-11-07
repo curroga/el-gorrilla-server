@@ -50,8 +50,8 @@ router.get("/:carId", isAuthenticated, async (req, res, next) => {
   try {
     //1. buscar un documento por su Id
     const response = await Cars.findById(carId)
-    //2. solo el dueño puede ver el coche
-    if (response && response.owner.toString() !== req.payload._id) {
+    //2. solo el dueño puede ver el coche (si no existe o es ajeno, 404)
+    if (!response || response.owner.toString() !== req.payload._id) {
       res.status(404).json("Coche no encontrado")
       return;
     }
@@ -69,7 +69,7 @@ router.delete("/:carId", isAuthenticated, async (req, res, next) => {
   try {
     //1. solo el dueño puede borrar el coche
     const car = await Cars.findById(carId)
-    if (car && car.owner.toString() !== req.payload._id) {
+    if (!car || car.owner.toString() !== req.payload._id) {
       res.status(404).json("Coche no encontrado")
       return;
     }
@@ -95,7 +95,7 @@ router.patch("/:carId", isAuthenticated, async (req, res, next) => {
   try {
     //1. solo el dueño puede editar el coche
     const car = await Cars.findById(carId)
-    if (car && car.owner.toString() !== req.payload._id) {
+    if (!car || car.owner.toString() !== req.payload._id) {
       res.status(404).json("Coche no encontrado")
       return;
     }
