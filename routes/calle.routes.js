@@ -110,15 +110,28 @@ router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
-  const { name, numAparcamientos, numOcupados, numLibres, positionMarker } = req.body
+  // numOcupados y numLibres se calculan, no se aceptan del cliente
+  const { name, numAparcamientos, ocupadosExternos, positionMarker } = req.body
 
   const calleUpdates = {
     name,
     numAparcamientos,
-    numOcupados,
-    numLibres,
     positionMarker    
     //!positionMarker: JSON.parse(positionMarker)    
+  }
+
+  // el ajuste del admin es opcional; si llega, debe ser un entero >= 0
+  // (el formulario lo envía como texto, por eso se convierte)
+  if (ocupadosExternos !== undefined) {
+    const esEntero =
+      (typeof ocupadosExternos === "number" && Number.isInteger(ocupadosExternos) && ocupadosExternos >= 0) ||
+      (typeof ocupadosExternos === "string" && /^\d+$/.test(ocupadosExternos.trim()))
+    const value = Number(ocupadosExternos)
+    if (!esEntero) {
+      res.status(400).json({ errorMessage: "ocupadosExternos debe ser un número entero mayor o igual que 0" })
+      return;
+    }
+    calleUpdates.ocupadosExternos = value
   }
 
   try {
@@ -172,7 +185,54 @@ router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next)
   const { calleId, cocheId  } = req.params
   
   try {    
-    await Calles.findByIdAndUpdate(calleId, {$addToSet: {coches: cocheId }})
+    // solo se aparca si el coche ya está en la calle o queda alguna plaza libre;
+    // la condición va en la misma operación para que dos peticiones a la vez
+    // no puedan ocupar la última plaza dos veces
+    const calle = await Calles.findOneAndUpdate(
+      {
+        _id: calleId,
+        $or: [
+          { coches: cocheId },
+          {
+            $expr: {
+              $lt: [
+                {
+                  $add: [
+                    { $size: { $ifNull: ["$coches", []] } },
+                    // ajuste del admin; en calles antiguas, el numOcupados guardado.
+                    // Solo cuenta un entero >= 0 (misma regla que el modelo).
+                    {
+                      $let: {
+                        vars: { ajuste: { $ifNull: ["$ocupadosExternos", { $ifNull: ["$numOcupados", 0] }] } },
+                        in: {
+                          $cond: [
+                            {
+                              $and: [
+                                { $isNumber: "$$ajuste" },
+                                { $gte: ["$$ajuste", 0] },
+                                { $eq: ["$$ajuste", { $trunc: "$$ajuste" }] }
+                              ]
+                            },
+                            "$$ajuste",
+                            0
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                { $ifNull: ["$numAparcamientos", 0] }
+              ]
+            }
+          }
+        ]
+      },
+      { $addToSet: { coches: cocheId } }
+    )
+    if (!calle && await Calles.exists({ _id: calleId })) {
+      res.status(409).json({ errorMessage: "No hay plazas libres" })
+      return;
+    }
     res.status(200).json({ message: "Coche añadido a la calle" })
   } catch (error) {
     next(error)
