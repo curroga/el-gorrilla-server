@@ -86,6 +86,18 @@ describe("POST /api/auth/signup", () => {
     });
     expect(await User.countDocuments()).toBe(1);
   });
+
+  it.each([
+    ["username", { username: { $gt: "" } }],
+    ["email", { email: { $gt: "" } }],
+    ["password", { password: ["Password1"] }],
+  ])("rejects a non-string %s with 400 without storing anything", async (_field, override) => {
+    await signup(validUser);
+    const res = await signup({ ...validUser, username: "other", email: "other@test.com", ...override });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ errorMessage: "Formato de datos no válido" });
+    expect(await User.countDocuments()).toBe(1);
+  });
 });
 
 describe("POST /api/auth/login", () => {
@@ -112,6 +124,18 @@ describe("POST /api/auth/login", () => {
     const res = await api().post("/api/auth/login").send(body);
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ errorMessage: "Credenciales no validas" });
+  });
+
+  it.each([
+    ["an operator object as username", { username: { $gt: "" }, password: VALID_PASSWORD }],
+    ["a regex object as username", { username: { $regex: "." }, password: VALID_PASSWORD }],
+    ["an object as password", { username: "maria", password: { $gt: "" } }],
+  ])("rejects %s with 400 and returns no token", async (_case, body) => {
+    await signup(validUser);
+    const res = await api().post("/api/auth/login").send(body);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ errorMessage: "Formato de datos no válido" });
+    expect(res.body.authToken).toBeUndefined();
   });
 });
 
