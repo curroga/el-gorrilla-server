@@ -72,6 +72,10 @@ router.get("/:calleId", isAuthenticated, async (req, res, next) => {
 
     // 1. buscar un documento de Calle por su Id
     const response = await Calles.findById(calleId).populate("coches")
+    if (!response) {
+      res.status(404).json("Calle no encontrada")
+      return;
+    }
 
     // 2. enviar el documento al cliente
     res.status(200).json(response)
@@ -87,7 +91,11 @@ router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   const { calleId } = req.params
   try {
     // borrar el documento por su id
-    await Calles.findByIdAndDelete(calleId)
+    const deleted = await Calles.findByIdAndDelete(calleId)
+    if (!deleted) {
+      res.status(404).json("Calle no encontrada")
+      return;
+    }
 
     // enviar repuesta al FE(Front End)
     res.status(200).json("todo bien, documento borrado")
@@ -115,7 +123,11 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 
   try {
     // editar el documento por su id
-    await Calles.findByIdAndUpdate(calleId, calleUpdates)
+    const updated = await Calles.findByIdAndUpdate(calleId, calleUpdates)
+    if (!updated) {
+      res.status(404).json("Calle no encontrada")
+      return;
+    }
       
     // enviar mensaje de "todo bien" al FE
     res.status(200).json("todo bien, documento actualizado")
