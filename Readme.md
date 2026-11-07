@@ -96,3 +96,11 @@ A continuación se detallan los endpoints disponibles.
 
 -   `isAuthenticated`: Verifica la validez del token JWT. Protege las rutas que requieren que un usuario esté autenticado.
 -   `isAdmin`: Comprueba si el usuario autenticado tiene el rol de `admin`. Se usa para proteger rutas de acceso restringido.
+## Tests
+
+Tests de integración de la API con **Vitest** y **Supertest**. Cada archivo de tests levanta un MongoDB temporal en memoria (`mongodb-memory-server`), así que no hace falta Docker ni se tocan los datos reales. La primera ejecución descarga el binario de MongoDB.
+
+-   `npm test`: Vitest en modo watch.
+-   `npm run test:run`: ejecuta la suite una vez.
+
+Los tests están en `tests/` y fijan el comportamiento actual de la API. Los casos marcados como `Current behavior (pinned)` documentan comportamientos que probablemente sean bugs y se corregirán aparte.
