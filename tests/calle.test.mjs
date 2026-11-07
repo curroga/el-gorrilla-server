@@ -25,7 +25,7 @@ describe("GET /api/calle", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
-    expect(res.body[0]).toMatchObject({ name: "Gran Vía", numAparcamientos: 10, numOcupados: 0, numLibres: 0 });
+    expect(res.body[0]).toMatchObject({ name: "Gran Vía", numAparcamientos: 10, numOcupados: 1, numLibres: 9 });
     expect(res.body[0].coches[0]).toMatchObject({ modelo: "Ibiza", matricula: "1234ABC" });
   });
 });
@@ -85,16 +85,24 @@ describe("PATCH /api/calle/:calleId", () => {
     const res = await api()
       .patch(`/api/calle/${calle._id}`)
       .set("Authorization", auth)
-      .send({ name: "Alcalá", numAparcamientos: 5, numOcupados: 2, numLibres: 3 });
+      .send({ name: "Alcalá", numAparcamientos: 5 });
 
     expect(res.status).toBe(200);
     expect(res.body).toBe("todo bien, documento actualizado");
-    expect(await Calles.findById(calle._id)).toMatchObject({
-      name: "Alcalá",
-      numAparcamientos: 5,
-      numOcupados: 2,
-      numLibres: 3,
-    });
+    const details = await api().get(`/api/calle/${calle._id}`).set("Authorization", auth);
+    expect(details.body).toMatchObject({ name: "Alcalá", numAparcamientos: 5, numOcupados: 0, numLibres: 5 });
+  });
+
+  it("ignores numOcupados and numLibres sent by the client", async () => {
+    const { auth } = await loginAs({ role: "admin" });
+    const calle = await createCalle();
+    await api()
+      .patch(`/api/calle/${calle._id}`)
+      .set("Authorization", auth)
+      .send({ name: "Alcalá", numAparcamientos: 5, numOcupados: 2, numLibres: 3 });
+
+    const details = await api().get(`/api/calle/${calle._id}`).set("Authorization", auth);
+    expect(details.body).toMatchObject({ numAparcamientos: 5, numOcupados: 0, numLibres: 5 });
   });
 
   it("rejects a regular user and leaves the street unchanged", async () => {
@@ -172,14 +180,52 @@ describe("parking cars on a street", () => {
     expect((await Calles.findById(calle._id)).coches).toHaveLength(0);
   });
 
-  // Current behavior (pinned): parking does not touch the occupancy counters.
-  it("does not update numOcupados or numLibres", async () => {
+  it("computes numOcupados and numLibres from the parked cars", async () => {
     const { user, auth } = await loginAs();
-    const calle = await createCalle({ numLibres: 10 });
+    const calle = await createCalle();
     const car = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const path = `/api/calle/${calle._id}/coches/${car._id}`;
+    const details = () => api().get(`/api/calle/${calle._id}`).set("Authorization", auth);
 
-    await api().post(`/api/calle/${calle._id}/coches/${car._id}`).set("Authorization", auth);
+    await api().post(path).set("Authorization", auth);
+    expect((await details()).body).toMatchObject({ numAparcamientos: 10, numOcupados: 1, numLibres: 9 });
 
-    expect(await Calles.findById(calle._id)).toMatchObject({ numOcupados: 0, numLibres: 10 });
+    await api().delete(path).set("Authorization", auth);
+    expect((await details()).body).toMatchObject({ numAparcamientos: 10, numOcupados: 0, numLibres: 10 });
+  });
+
+  it("ignores counters already stored in the database", async () => {
+    const { auth } = await loginAs();
+    const { insertedId } = await Calles.collection.insertOne({
+      name: "Legacy", numAparcamientos: 4, numOcupados: 3, numLibres: 7, coches: [],
+    });
+
+    const res = await api().get(`/api/calle/${insertedId}`).set("Authorization", auth);
+    expect(res.body).toMatchObject({ numAparcamientos: 4, numOcupados: 0, numLibres: 4 });
+  });
+
+  it("rejects parking on a full street with 409 and changes nothing", async () => {
+    const { user, auth } = await loginAs();
+    const parked = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const car = await Cars.create({ modelo: "León", owner: user._id });
+    const calle = await createCalle({ numAparcamientos: 1, coches: [parked._id] });
+
+    const res = await api().post(`/api/calle/${calle._id}/coches/${car._id}`).set("Authorization", auth);
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ errorMessage: "No hay plazas libres" });
+    expect((await Calles.findById(calle._id)).coches.map(String)).toEqual([parked._id.toString()]);
+  });
+
+  it("parking a car already on a full street is a no-op, not a 409", async () => {
+    const { user, auth } = await loginAs();
+    const parked = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const calle = await createCalle({ numAparcamientos: 1, coches: [parked._id] });
+
+    const res = await api().post(`/api/calle/${calle._id}/coches/${parked._id}`).set("Authorization", auth);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ message: "Coche añadido a la calle" });
+    expect((await Calles.findById(calle._id)).coches).toHaveLength(1);
   });
 });

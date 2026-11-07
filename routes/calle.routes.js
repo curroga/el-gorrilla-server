@@ -102,13 +102,12 @@ router.delete("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
 router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
-  const { name, numAparcamientos, numOcupados, numLibres, positionMarker } = req.body
+  // numOcupados y numLibres se calculan, no se aceptan del cliente
+  const { name, numAparcamientos, positionMarker } = req.body
 
   const calleUpdates = {
     name,
     numAparcamientos,
-    numOcupados,
-    numLibres,
     positionMarker    
     //!positionMarker: JSON.parse(positionMarker)    
   }
@@ -160,7 +159,23 @@ router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next)
   const { calleId, cocheId  } = req.params
   
   try {    
-    await Calles.findByIdAndUpdate(calleId, {$addToSet: {coches: cocheId }})
+    // solo se aparca si el coche ya está en la calle o queda alguna plaza libre;
+    // la condición va en la misma operación para que dos peticiones a la vez
+    // no puedan ocupar la última plaza dos veces
+    const calle = await Calles.findOneAndUpdate(
+      {
+        _id: calleId,
+        $or: [
+          { coches: cocheId },
+          { $expr: { $lt: [{ $size: "$coches" }, { $ifNull: ["$numAparcamientos", 0] }] } }
+        ]
+      },
+      { $addToSet: { coches: cocheId } }
+    )
+    if (!calle && await Calles.exists({ _id: calleId })) {
+      res.status(409).json({ errorMessage: "No hay plazas libres" })
+      return;
+    }
     res.status(200).json({ message: "Coche añadido a la calle" })
   } catch (error) {
     next(error)
