@@ -83,24 +83,35 @@ describe("DELETE /api/car/:carId", () => {
   });
 });
 
-// Current behavior (pinned): by-id routes do not check ownership, so any
-// logged-in user can read, edit or delete someone else's car.
+// Only the owner may read, edit or delete a car by id. Operating on a car
+// owned by someone else answers 404 and changes nothing (issue #3).
 describe("ownership on /api/car/:carId", () => {
-  it("lets another user read, edit and delete a car they do not own", async () => {
+  it("does not let another user read a car they do not own", async () => {
     const { user: owner } = await loginAs({ username: "ana" });
     const { auth: intruder } = await loginAs({ username: "luis" });
     const car = await Cars.create({ ...carBody, owner: owner._id });
 
     const read = await api().get(`/api/car/${car._id}`).set("Authorization", intruder);
-    expect(read.status).toBe(200);
-    expect(read.body.matricula).toBe("1234ABC");
+    expect(read.status).toBe(404);
+  });
+
+  it("does not let another user edit a car they do not own", async () => {
+    const { user: owner } = await loginAs({ username: "ana" });
+    const { auth: intruder } = await loginAs({ username: "luis" });
+    const car = await Cars.create({ ...carBody, owner: owner._id });
 
     const edit = await api().patch(`/api/car/${car._id}`).set("Authorization", intruder).send({ color: "negro" });
-    expect(edit.status).toBe(200);
-    expect((await Cars.findById(car._id)).color).toBe("negro");
+    expect(edit.status).toBe(404);
+    expect((await Cars.findById(car._id)).color).toBe("rojo");
+  });
+
+  it("does not let another user delete a car they do not own", async () => {
+    const { user: owner } = await loginAs({ username: "ana" });
+    const { auth: intruder } = await loginAs({ username: "luis" });
+    const car = await Cars.create({ ...carBody, owner: owner._id });
 
     const del = await api().delete(`/api/car/${car._id}`).set("Authorization", intruder);
-    expect(del.status).toBe(200);
-    expect(await Cars.countDocuments()).toBe(0);
+    expect(del.status).toBe(404);
+    expect(await Cars.countDocuments()).toBe(1);
   });
 });

@@ -50,7 +50,12 @@ router.get("/:carId", isAuthenticated, async (req, res, next) => {
   try {
     //1. buscar un documento por su Id
     const response = await Cars.findById(carId)
-    //2. enviar el documento al cliente
+    //2. solo el dueño puede ver el coche
+    if (response && response.owner.toString() !== req.payload._id) {
+      res.status(404).json("Coche no encontrado")
+      return;
+    }
+    //3. enviar el documento al cliente
     res.status(200).json(response)
 
   } catch (error) {
@@ -62,9 +67,15 @@ router.get("/:carId", isAuthenticated, async (req, res, next) => {
 router.delete("/:carId", isAuthenticated, async (req, res, next) => {
   const { carId } = req.params
   try {
-    //1. borrar el documento por su Id
+    //1. solo el dueño puede borrar el coche
+    const car = await Cars.findById(carId)
+    if (car && car.owner.toString() !== req.payload._id) {
+      res.status(404).json("Coche no encontrado")
+      return;
+    }
+    //2. borrar el documento por su Id
     const response = await Cars.findByIdAndDelete(carId)
-    //2. enviar respuesta al FE
+    //3. enviar respuesta al FE
     res.status(200).json("Coche borrado")
   } catch (error) {
     next(error)
@@ -82,6 +93,12 @@ router.patch("/:carId", isAuthenticated, async (req, res, next) => {
     color
   }
   try {
+    //1. solo el dueño puede editar el coche
+    const car = await Cars.findById(carId)
+    if (car && car.owner.toString() !== req.payload._id) {
+      res.status(404).json("Coche no encontrado")
+      return;
+    }
     await Cars.findByIdAndUpdate(carId, carUpdate)
 
     res.status(200).json("Coche actualizado")
