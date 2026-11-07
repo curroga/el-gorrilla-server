@@ -16,6 +16,11 @@ router.post("/signup", async (req, res, next) => {
     res.status(400).json({ errorMessage: "Debe llenar todos los campos" })
     return;
   }
+  // solo se aceptan textos: un objeto como {"$gt": ""} llegaría a la consulta como filtro
+  if (typeof username !== "string" || typeof email !== "string" || typeof password !== "string") {
+    res.status(400).json({ errorMessage: "Formato de datos no válido" })
+    return;
+  }
   // validar la fuerza de la contraseña
   const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/gm;
   if (passwordRegex.test(password) === false) {
@@ -70,6 +75,11 @@ router.post("/login", async (req, res, next) => {
   // validar que todos los campos esten rellenos
   if( !username || !password ){
     res.status(400).json({ errorMessage: "Debe llenar todos los campos" })
+    return;
+  }
+  // solo se aceptan textos: un objeto como {"$gt": ""} llegaría a la consulta como filtro
+  if (typeof username !== "string" || typeof password !== "string") {
+    res.status(400).json({ errorMessage: "Formato de datos no válido" })
     return;
   }
     
