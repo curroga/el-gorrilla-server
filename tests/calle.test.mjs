@@ -42,11 +42,11 @@ describe("POST /api/calle", () => {
     expect([...stored.positionMarker]).toEqual([40.42, -3.7]);
   });
 
-  it("rejects a regular user with 401 and stores nothing", async () => {
+  it("rejects a regular user with 403 and stores nothing", async () => {
     const { auth } = await loginAs();
     const res = await api().post("/api/calle").set("Authorization", auth).send(newCalleBody);
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
     expect(res.body).toEqual({ errorMessage: "No eres Admin" });
     expect(await Calles.countDocuments()).toBe(0);
   });
@@ -102,7 +102,7 @@ describe("PATCH /api/calle/:calleId", () => {
     const calle = await createCalle();
     const res = await api().patch(`/api/calle/${calle._id}`).set("Authorization", auth).send({ name: "Alcalá" });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
     expect(res.body).toEqual({ errorMessage: "No eres Admin" });
     expect((await Calles.findById(calle._id)).name).toBe("Gran Vía");
   });
@@ -124,7 +124,7 @@ describe("DELETE /api/calle/:calleId", () => {
     const calle = await createCalle();
     const res = await api().delete(`/api/calle/${calle._id}`).set("Authorization", auth);
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
     expect(res.body).toEqual({ errorMessage: "No eres Admin" });
     expect(await Calles.countDocuments()).toBe(1);
   });
