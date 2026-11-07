@@ -103,13 +103,24 @@ router.patch("/:calleId", isAuthenticated, isAdmin, async (req, res, next) => {
   // buscar los cambios a editar del documento
   const { calleId } = req.params
   // numOcupados y numLibres se calculan, no se aceptan del cliente
-  const { name, numAparcamientos, positionMarker } = req.body
+  const { name, numAparcamientos, ocupadosExternos, positionMarker } = req.body
 
   const calleUpdates = {
     name,
     numAparcamientos,
     positionMarker    
     //!positionMarker: JSON.parse(positionMarker)    
+  }
+
+  // el ajuste del admin es opcional; si llega, debe ser un entero >= 0
+  // (el formulario lo envía como texto, por eso se convierte)
+  if (ocupadosExternos !== undefined) {
+    const value = Number(ocupadosExternos)
+    if (ocupadosExternos === "" || ocupadosExternos === null || !Number.isInteger(value) || value < 0) {
+      res.status(400).json({ errorMessage: "ocupadosExternos debe ser un número entero mayor o igual que 0" })
+      return;
+    }
+    calleUpdates.ocupadosExternos = value
   }
 
   try {
@@ -167,7 +178,20 @@ router.post("/:calleId/coches/:cocheId", isAuthenticated, async (req, res, next)
         _id: calleId,
         $or: [
           { coches: cocheId },
-          { $expr: { $lt: [{ $size: { $ifNull: ["$coches", []] } }, { $ifNull: ["$numAparcamientos", 0] }] } }
+          {
+            $expr: {
+              $lt: [
+                {
+                  $add: [
+                    { $size: { $ifNull: ["$coches", []] } },
+                    // ajuste del admin; en calles antiguas, el numOcupados guardado
+                    { $ifNull: ["$ocupadosExternos", { $ifNull: ["$numOcupados", 0] }] }
+                  ]
+                },
+                { $ifNull: ["$numAparcamientos", 0] }
+              ]
+            }
+          }
         ]
       },
       { $addToSet: { coches: cocheId } }

@@ -194,14 +194,75 @@ describe("parking cars on a street", () => {
     expect((await details()).body).toMatchObject({ numAparcamientos: 10, numOcupados: 0, numLibres: 10 });
   });
 
-  it("ignores counters already stored in the database", async () => {
+  it("uses a legacy stored numOcupados as the admin adjustment and ignores stored numLibres", async () => {
     const { auth } = await loginAs();
     const { insertedId } = await Calles.collection.insertOne({
       name: "Legacy", numAparcamientos: 4, numOcupados: 3, numLibres: 7, coches: [],
     });
 
     const res = await api().get(`/api/calle/${insertedId}`).set("Authorization", auth);
-    expect(res.body).toMatchObject({ numAparcamientos: 4, numOcupados: 0, numLibres: 4 });
+    expect(res.body).toMatchObject({ numAparcamientos: 4, ocupadosExternos: 3, numOcupados: 3, numLibres: 1 });
+  });
+
+  it("counts the admin adjustment as occupied spaces", async () => {
+    const { user, auth } = await loginAs({ role: "admin" });
+    const car = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const calle = await createCalle({ numAparcamientos: 10, coches: [car._id] });
+
+    const res = await api().patch(`/api/calle/${calle._id}`).set("Authorization", auth).send({ ocupadosExternos: "3" });
+    expect(res.status).toBe(200);
+
+    const details = await api().get(`/api/calle/${calle._id}`).set("Authorization", auth);
+    expect(details.body).toMatchObject({ numAparcamientos: 10, ocupadosExternos: 3, numOcupados: 4, numLibres: 6 });
+  });
+
+  it("an explicit adjustment of 0 overrides a legacy stored numOcupados", async () => {
+    const { auth } = await loginAs({ role: "admin" });
+    const { insertedId } = await Calles.collection.insertOne({
+      name: "Legacy", numAparcamientos: 4, numOcupados: 3, coches: [],
+    });
+
+    await api().patch(`/api/calle/${insertedId}`).set("Authorization", auth).send({ ocupadosExternos: 0 });
+
+    const details = await api().get(`/api/calle/${insertedId}`).set("Authorization", auth);
+    expect(details.body).toMatchObject({ ocupadosExternos: 0, numOcupados: 0, numLibres: 4 });
+  });
+
+  it.each([[-1], ["abc"], [1.5]])("rejects the adjustment %s with 400 and changes nothing", async (value) => {
+    const { auth } = await loginAs({ role: "admin" });
+    const calle = await createCalle({ ocupadosExternos: 2 });
+
+    const res = await api().patch(`/api/calle/${calle._id}`).set("Authorization", auth).send({ name: "Alcalá", ocupadosExternos: value });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ errorMessage: "ocupadosExternos debe ser un número entero mayor o igual que 0" });
+    expect(await Calles.findById(calle._id)).toMatchObject({ name: "Gran Vía", ocupadosExternos: 2 });
+  });
+
+  it("rejects parking with 409 when the admin adjustment fills the street", async () => {
+    const { user, auth } = await loginAs();
+    const parked = await Cars.create({ modelo: "Ibiza", owner: user._id });
+    const car = await Cars.create({ modelo: "León", owner: user._id });
+    const calle = await createCalle({ numAparcamientos: 2, ocupadosExternos: 1, coches: [parked._id] });
+
+    const res = await api().post(`/api/calle/${calle._id}/coches/${car._id}`).set("Authorization", auth);
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ errorMessage: "No hay plazas libres" });
+    expect((await Calles.findById(calle._id)).coches).toHaveLength(1);
+  });
+
+  it("rejects parking with 409 when a legacy stored numOcupados fills the street", async () => {
+    const { user, auth } = await loginAs();
+    const car = await Cars.create({ modelo: "León", owner: user._id });
+    const { insertedId } = await Calles.collection.insertOne({
+      name: "Legacy", numAparcamientos: 2, numOcupados: 2, coches: [],
+    });
+
+    const res = await api().post(`/api/calle/${insertedId}/coches/${car._id}`).set("Authorization", auth);
+
+    expect(res.status).toBe(409);
+    expect((await Calles.collection.findOne({ _id: insertedId })).coches).toEqual([]);
   });
 
   it("rejects parking on a full street with 409 and changes nothing", async () => {

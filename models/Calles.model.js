@@ -3,6 +3,11 @@ const mongoose = require("mongoose")
 const calleSchema = new mongoose.Schema ({
   name: String,
   numAparcamientos: Number,
+  // plazas ocupadas por coches que no usan la app; lo ajusta el admin a mano
+  ocupadosExternos: {
+    type: Number,
+    min: 0
+  },
   coches: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: "Cars"
@@ -17,10 +22,20 @@ const calleSchema = new mongoose.Schema ({
   toObject: { virtuals: true }
 })
 
+// Antes, numOcupados se guardaba y solo lo editaba el admin a mano, así que
+// ese valor equivale al ajuste manual. Si una calle aún no tiene
+// ocupadosExternos, se usa el numOcupados guardado (sin migrar los datos).
+calleSchema.pre("init", function (raw) {
+  if (raw && raw.ocupadosExternos == null && typeof raw.numOcupados === "number") {
+    raw.ocupadosExternos = raw.numOcupados
+  }
+})
+
 // numOcupados y numLibres no se guardan: se calculan a partir de los coches
-// aparcados y de numAparcamientos, para que no puedan contradecirse.
+// aparcados, del ajuste del admin y de numAparcamientos, para que no puedan
+// contradecirse.
 calleSchema.virtual("numOcupados").get(function () {
-  return (this.coches || []).length
+  return (this.coches || []).length + (this.ocupadosExternos || 0)
 })
 
 calleSchema.virtual("numLibres").get(function () {
