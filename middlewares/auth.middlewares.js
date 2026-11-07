@@ -27,7 +27,7 @@ const isAuthenticated = jwt({
 
 const isAdmin = (req, res, next) => {
   if(req.payload.role !== "admin"){
-    res.status(401).json({errorMessage: "No eres Admin"})
+    res.status(403).json({errorMessage: "No eres Admin"})
     return;
   } else {
     next()

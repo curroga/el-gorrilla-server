@@ -14,6 +14,12 @@ module.exports = (app) => {
       return;
     }
 
+    // un id con formato inválido en la URL no puede existir: 404
+    if (err.name === "CastError" && err.path === "_id" && !res.headersSent) {
+      res.status(404).json({ errorMessage: "Recurso no encontrado" })
+      return;
+    }
+
     // only render if the error ocurred before sending the response
     if (!res.headersSent) {
       res
